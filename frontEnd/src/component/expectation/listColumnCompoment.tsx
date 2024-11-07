@@ -106,6 +106,24 @@ export const NameColumn = ({
           //
         }}
       />
+         <Input
+        placeholder="Group"
+        value={expectation.group}
+        style={{ marginTop: "4px" }}
+        onChange={(event) => {
+          run(projectId, expectation.id, {
+            group: event.target.value,
+          });
+          dispatch(
+            updateExpectationItem({
+              expectationId: expectation.id,
+              modifyValues: {
+                group: event.target.value,
+              },
+            }),
+          );
+        }}
+      />
     </div>
   );
 };

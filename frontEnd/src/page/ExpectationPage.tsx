@@ -1,5 +1,5 @@
-import { App, Button, Table } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { App, Button, Table, Select, message } from "antd";
+import { PlusOutlined, UploadOutlined, DownloadOutlined } from "@ant-design/icons";
 import { AppDispatch, useAppSelector } from "../store";
 import {
   createExpectationReq,
@@ -20,10 +20,13 @@ import { useQuery } from "@tanstack/react-query";
 import { toastPromise } from "../component/common";
 import { getExpectationSuccess } from "../slice/thunk";
 import { NInput } from "../component/nui/NInput";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ExpectationContext } from "../component/context";
+import saveAs from "file-saver";
 
 const ExpectationPage = () => {
+  const [selectedGroup, setSelectedGroup] = useState<string>("");
+
   const { modal } = App.useApp();
   const projectState = useAppSelector((state) => state.project);
   const expectationState = useAppSelector((state) => state.expectation);
@@ -154,6 +157,45 @@ const ExpectationPage = () => {
       },
     },
   ];
+
+  const exportExpectations = () => {
+    const data = JSON.stringify(expectationState.expectationList, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    saveAs(blob, "expectations.json");
+  };
+
+  const importExpectations = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const data = e.target?.result as string;
+      const expectations = JSON.parse(data);
+
+      expectations.forEach((expectation: ExpectationM) => {
+        createExpectationReq(currentProject.id, expectation).then(() => {
+          getExpectationListQuery.refetch();
+        });
+      });
+      message.success("Expectations imported successfully");
+    };
+    reader.readAsText(file);
+  };
+
+  const uniqueGroups = useMemo(() => {
+    const groups = expectationState.expectationList
+      .map(exp => exp.group)
+      .filter(group => group !== undefined) as string[];
+    return [...new Set(groups)];
+  }, [expectationState.expectationList]);
+
+  // Filtrelenmiş beklenti listesi
+  const filteredExpectations = useMemo(() => {
+    if (!selectedGroup) return expectationState.expectationList;
+    return expectationState.expectationList.filter(exp => exp.group === selectedGroup);
+  }, [expectationState.expectationList, selectedGroup]);
+
   return (
     <ExpectationContext.Provider
       value={{
@@ -181,13 +223,45 @@ const ExpectationPage = () => {
           >
             Add Expectation
           </Button>
+          <Select
+            style={{ width: 200 }}
+            placeholder="Filter by group"
+            allowClear
+            value={selectedGroup}
+            onChange={setSelectedGroup}
+            options={uniqueGroups.map(group => ({
+              label: group,
+              value: group
+            }))}
+          />
+            <Button
+            type={"text"}
+            icon={<DownloadOutlined />}
+            onClick={exportExpectations}
+          >
+            Export as JSON
+          </Button>
+          <Button
+            type={"text"}
+            icon={<UploadOutlined />}
+            onClick={() => document.getElementById('fileInput')?.click()}
+          >
+            Import from JSON
+          </Button>
+          <input
+            type="file"
+            id="fileInput"
+            style={{ display: 'none' }}
+            accept=".json"
+            onChange={importExpectations}
+          />
         </div>
         <div>
           <Table
             columns={expectationColumn}
             size={"small"}
             rowKey={"id"}
-            dataSource={expectationState.expectationList}
+            dataSource={filteredExpectations}
             loading={getExpectationListQuery.isFetching}
           />
         </div>
