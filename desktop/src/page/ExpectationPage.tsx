@@ -1,4 +1,4 @@
-import { App, Button, Table } from "antd";
+import { App, Button, Select, Table } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { AppDispatch, useAppSelector } from "../store";
 import {
@@ -20,9 +20,12 @@ import { useQuery } from "@tanstack/react-query";
 import { toastPromise } from "../component/common";
 import { getExpectationSuccess } from "../slice/thunk";
 import { ExpectationContext } from "src/component/context";
+import { useState, useMemo } from "react";
 
 const ExpectationPage = () => {
   const { modal } = App.useApp();
+  const [selectedGroup, setSelectedGroup] = useState<string>("");
+
   const projectState = useAppSelector((state) => state.project);
   const expectationState = useAppSelector((state) => state.expectation);
   const currentProject = projectState.projectList[projectState.curProjectIndex];
@@ -152,6 +155,21 @@ const ExpectationPage = () => {
       },
     },
   ];
+
+  const uniqueGroups = useMemo(() => {
+    const groups = expectationState.expectationList
+      .map(exp => exp.group)
+      .filter(group => group !== undefined) as string[];
+    return [...new Set(groups)];
+  }, [expectationState.expectationList]);
+
+  const filteredExpectations = useMemo(() => {
+    if (!selectedGroup) return expectationState.expectationList;
+    return expectationState.expectationList.filter(exp => exp.group === selectedGroup);
+  }, [expectationState.expectationList, selectedGroup]);
+
+
+
   return (
     <ExpectationContext.Provider
       value={{
@@ -179,13 +197,25 @@ const ExpectationPage = () => {
           >
             Add Expectation
           </Button>
+
+          <Select
+            style={{ width: 200 }}
+            placeholder="Filter by group"
+            allowClear
+            value={selectedGroup}
+            onChange={setSelectedGroup}
+            options={uniqueGroups.map(group => ({
+              label: group,
+              value: group
+            }))}
+          />
         </div>
         <div>
           <Table
             columns={expectationColumn}
             size={"small"}
             rowKey={"id"}
-            dataSource={expectationState.expectationList}
+            dataSource={filteredExpectations}
             loading={getExpectationListQuery.isFetching}
           />
         </div>

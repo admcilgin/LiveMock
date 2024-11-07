@@ -9,6 +9,7 @@ export interface ExpectationM {
   delay: number;
   priority: number;
   activate: boolean;
+  group:string;
   matchers: Array<RequestMatcherM>;
   actions: Array<ActionM>;
   createTime: Date;
@@ -25,6 +26,7 @@ export function createExpectation(): ExpectationM {
     matchers: [],
     name: "",
     priority: 0,
+    group: "",
   };
 }
 
@@ -43,3 +45,5 @@ export function duplicateExpectation(expectation: ExpectationM): ExpectationM {
 
   return expectationDP;
 }
+
+
