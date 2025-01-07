@@ -12,17 +12,25 @@ class ParamMatcherImpl implements IMatcher {
   }
 
   match(req: express.Request): boolean {
+    let value;
+    
+    // Multipart form-data içindeki JSON'ı parse et
+    if (typeis(req, ["multipart"]) && req.body.data) {
+      try {
+        const jsonData = JSON.parse(req.body.data);
+        value = _.get(jsonData, this.matcher.name);
+      } catch (e) {
+        value = _.get(req.body, this.matcher.name);
+      }
+    } else {
+      value = _.get(req.body, this.matcher.name);
+    }
 
-    let value = _.get(req.body, this.matcher.name);
-    // 判断 传参 方法
-    // json urlencode formdata
     if (typeis.hasBody(req)) {
       switch (typeis(req, ["urlencoded", "json", "multipart"])) {
         case "urlencoded":
-          // parse urlencoded body
           return matchUtils.matchAnyValue(value, this.matcher);
         case "json":
-          // parse json body
           return matchUtils.matchAnyValue(value, this.matcher);
         case "multipart":
           return matchUtils.matchAnyValue(value, this.matcher);
@@ -34,4 +42,5 @@ class ParamMatcherImpl implements IMatcher {
     }
   }
 }
+
 export default ParamMatcherImpl;

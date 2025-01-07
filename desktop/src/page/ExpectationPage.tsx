@@ -1,9 +1,11 @@
 import { App, Button, Select, Table } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import { AppDispatch, useAppSelector } from "../store";
 import {
   createExpectationReq,
   listExpectationListReq,
+  exportExpectationReq,
+  importExpectationReq,
 } from "../server/expectationServer";
 import { createExpectation, ExpectationM } from "core/struct/expectation";
 import {
@@ -20,7 +22,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toastPromise } from "../component/common";
 import { getExpectationSuccess } from "../slice/thunk";
 import { ExpectationContext } from "src/component/context";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 
 const ExpectationPage = () => {
   const { modal } = App.useApp();
@@ -168,7 +170,7 @@ const ExpectationPage = () => {
     return expectationState.expectationList.filter(exp => exp.group === selectedGroup);
   }, [expectationState.expectationList, selectedGroup]);
 
-
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <ExpectationContext.Provider
@@ -179,7 +181,7 @@ const ExpectationPage = () => {
       }}
     >
       <div style={{ padding: "10px" }}>
-        <div style={{ margin: "10px 0px" }}>
+        <div style={{ margin: "10px 0px", display: "flex", gap: "10px" }}>
           <Button
             type={"text"}
             icon={<PlusOutlined />}
@@ -197,6 +199,43 @@ const ExpectationPage = () => {
           >
             Add Expectation
           </Button>
+
+          <Button
+            type="text"
+            icon={<DownloadOutlined />}
+            onClick={() => {
+              const selectedIds = filteredExpectations.map(exp => exp.id);
+              toastPromise(exportExpectationReq(currentProject.id, selectedIds));
+            }}
+          >
+            Export
+          </Button>
+
+          <Button
+            type="text"
+            icon={<UploadOutlined />}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Import
+          </Button>
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            accept=".json"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                try {
+                  await toastPromise(importExpectationReq(currentProject.id, file));
+                  getExpectationListQuery.refetch();
+                } finally {
+                  e.target.value = '';
+                }
+              }
+            }}
+          />
 
           <Select
             style={{ width: 200 }}

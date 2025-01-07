@@ -225,6 +225,12 @@ export const api = {
         reqBody
       );
     },
+    exportExpectation: (projectId: string, expectationIds: string[]) => {
+      return ipcRenderer.invoke(ExpectationEvents.ExportExpectation, projectId, expectationIds);
+    },
+    importExpectation: async (projectId: string, fileContent: string) => {
+      return ipcRenderer.invoke(ExpectationEvents.ImportExpectation, projectId, fileContent);
+    }
   },
   matcher: {
     createMatcher: (

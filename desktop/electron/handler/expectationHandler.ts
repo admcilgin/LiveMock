@@ -20,6 +20,8 @@ import {
 import { ServerError } from "./common";
 import { getExpectationCollection } from "../db/dbManager";
 import { logViewEventEmitter } from "../common/logViewEvent";
+import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 
 const ipcMain = electron.ipcMain;
 
@@ -136,4 +138,63 @@ export async function setExpectationHandler(path: string): Promise<void> {
       return expectation;
     }
   );
+
+  ipcMain.handle(ExpectationEvents.ExportExpectation, 
+    async (event, projectId: string, expectationIds: string[]) => {
+      try {
+        const collection = await getExpectationCollection(projectId, path);
+        const expectations = collection.find({
+          id: { $in: expectationIds }
+        });
+        
+        const exportData = {
+          version: '1.0',
+          expectations: expectations
+        };
+        
+        return JSON.stringify(exportData, null, 2);
+      } catch (error) {
+        throw new ServerError(500, "Failed to export expectations: " + (error as Error).message);
+      }
+  });
+
+  ipcMain.handle(ExpectationEvents.ImportExpectation,
+    async (event, projectId: string, fileContent: string) => {
+      try {
+        const collection = await getExpectationCollection(projectId, path);
+        const importData = JSON.parse(fileContent);
+        
+        if (!importData.expectations || !Array.isArray(importData.expectations)) {
+          throw new ServerError(400, "Invalid import file format");
+        }
+
+        const imported = importData.expectations.map(exp => {
+          const newExpectation = {
+            ...exp,
+            id: uuidv4()
+          };
+          
+          if (newExpectation.matchers) {
+            newExpectation.matchers = newExpectation.matchers.map(matcher => ({
+              ...matcher,
+              id: uuidv4()
+            }));
+          }
+          
+          if (newExpectation.actions) {
+            newExpectation.actions = newExpectation.actions.map(action => ({
+              ...action,
+              id: uuidv4()
+            }));
+          }
+
+          return collection.insert(newExpectation);
+        });
+
+        logViewEventEmitter.emit("insertExpectation", { projectId, resExp: imported });
+        return imported;
+      } catch (error) {
+        throw new ServerError(500, "Failed to import expectations: " + (error as Error).message);
+      }
+    });
 }

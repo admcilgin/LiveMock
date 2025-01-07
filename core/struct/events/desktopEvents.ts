@@ -16,7 +16,9 @@ export enum ExpectationEvents{
     CreateExpectation="CreateExpectation",
     UpdateExpectation="UpdateExpectation",
     DeleteExpectation="DeleteExpectation",
-    GetExpectation="GetExpectation"
+    GetExpectation="GetExpectation",
+    ExportExpectation="ExportExpectation",
+    ImportExpectation="ImportExpectation"
 
 }
 
