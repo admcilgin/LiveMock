@@ -32,17 +32,69 @@ export async function setExpectationHandler(path: string): Promise<void> {
       reqQuery: CreateExpectationReqQuery,
       reqBody: CreateExpectationReqBody
     ) => {
-      let { expectation, projectId } = reqBody;
+      const { expectation, projectId } = reqBody;
       if (!projectId) {
         throw new ServerError(400, "project id not exist!");
       }
-      const collection = await getExpectationCollection(projectId, path);
-      if (expectation) {
-        const resExp = collection.insert(expectation);
-        logViewEventEmitter.emit("insertExpectation", { projectId, resExp });
-        return resExp;
-      } else {
-        throw new ServerError(400, "expectation not exist!");
+      
+      console.log("CreateExpectation - Received expectation:", JSON.stringify({
+        id: expectation.id,
+        name: expectation.name,
+        matchers: expectation.matchers.map(m => ({ id: m.id, type: m.type })),
+        actions: expectation.actions.map(a => ({ id: a.id, type: a.type }))
+      }));
+      
+      try {
+        const collection = await getExpectationCollection(projectId, path);
+        
+        // Check if an expectation with the same ID already exists
+        const existingExp = collection.findOne({ id: expectation.id });
+        if (existingExp) {
+          console.log("CreateExpectation - Error: Expectation with ID already exists:", expectation.id);
+          throw new Error(`Expectation with ID ${expectation.id} already exists. Please use update instead.`);
+        }
+        
+        // Check if there are any matchers or actions with duplicate IDs
+        const matcherIds = new Set();
+        const actionIds = new Set();
+        let hasDuplicateIds = false;
+        
+        expectation.matchers.forEach(matcher => {
+          if (matcherIds.has(matcher.id)) {
+            console.log("CreateExpectation - Error: Duplicate matcher ID:", matcher.id);
+            hasDuplicateIds = true;
+          }
+          matcherIds.add(matcher.id);
+        });
+        
+        expectation.actions.forEach(action => {
+          if (actionIds.has(action.id)) {
+            console.log("CreateExpectation - Error: Duplicate action ID:", action.id);
+            hasDuplicateIds = true;
+          }
+          actionIds.add(action.id);
+        });
+        
+        if (hasDuplicateIds) {
+          throw new Error("Expectation contains duplicate matcher or action IDs");
+        }
+        
+        if (expectation) {
+          console.log("CreateExpectation - Inserting expectation with ID:", expectation.id);
+          const resExp = collection.insert(expectation);
+          if (resExp) {
+            console.log("CreateExpectation - Successfully inserted expectation with ID:", resExp.id);
+            logViewEventEmitter.emit("insertExpectation", { projectId, resExp });
+          } else {
+            console.log("CreateExpectation - Warning: Insert returned undefined");
+          }
+          return resExp;
+        } else {
+          throw new ServerError(400, "expectation not exist!");
+        }
+      } catch (error: any) {
+        console.error("CreateExpectation - Error:", error.message, error.stack);
+        throw error;
       }
     }
   );

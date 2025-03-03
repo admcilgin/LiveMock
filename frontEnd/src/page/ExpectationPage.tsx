@@ -1,11 +1,12 @@
-import { App, Button, Table } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { App, Button, Table, Upload, message } from "antd";
+import { PlusOutlined, UploadOutlined, DownloadOutlined } from "@ant-design/icons";
 import { AppDispatch, useAppSelector } from "../store";
 import {
   createExpectationReq,
   listExpectationReq,
 } from "../server/expectationServer";
 import { createExpectation, ExpectationM } from "livemock-core/struct/expectation";
+import { v4 as uuId } from "uuid";
 import {
   ActionColumn,
   ActivateColumn,
@@ -22,6 +23,7 @@ import { getExpectationSuccess } from "../slice/thunk";
 import { NInput } from "../component/nui/NInput";
 import { useState } from "react";
 import { ExpectationContext } from "../component/context";
+import { saveAs } from 'file-saver';
 
 const ExpectationPage = () => {
   const { modal } = App.useApp();
@@ -163,7 +165,7 @@ const ExpectationPage = () => {
       }}
     >
       <div style={{ padding: "10px" }}>
-        <div style={{ margin: "10px 0px" }}>
+        <div style={{ margin: "10px 0px", display: "flex", gap: "10px" }}>
           <Button
             type={"text"}
             icon={<PlusOutlined />}
@@ -181,6 +183,146 @@ const ExpectationPage = () => {
           >
             Add Expectation
           </Button>
+          <Button
+            type={"text"}
+            icon={<DownloadOutlined />}
+            onClick={() => {
+              // Export expectations as JSON
+              if (expectationState.expectationList.length === 0) {
+                message.warning("Dışa aktarılacak beklenti bulunamadı.");
+                return;
+              }
+              
+              const exportData = JSON.stringify(expectationState.expectationList, null, 2);
+              const blob = new Blob([exportData], { type: "application/json" });
+              saveAs(blob, `expectations-${currentProject.name}-${new Date().toISOString().slice(0, 10)}.json`);
+              message.success("Beklentiler başarıyla dışa aktarıldı.");
+            }}
+          >
+            Export
+          </Button>
+          <Upload
+            showUploadList={false}
+            beforeUpload={(file) => {
+              const reader = new FileReader();
+              reader.onload = async (e) => {
+                try {
+                  const content = e.target?.result as string;
+                  const importedExpectations = JSON.parse(content) as ExpectationM[];
+                  
+                  if (!Array.isArray(importedExpectations)) {
+                    message.error("Geçersiz dosya formatı. Beklentiler listesi içeren bir JSON dosyası olmalı.");
+                    return false;
+                  }
+                  
+                  // Import each expectation
+                  const importPromises = importedExpectations.map(exp => {
+                    // Create a completely new expectation object with only the necessary data
+                    const newExp: ExpectationM = {
+                      id: uuId(),
+                      name: `${exp.name} (imported)`,
+                      delay: exp.delay,
+                      priority: exp.priority,
+                      activate: exp.activate,
+                      matchers: [],
+                      actions: [],
+                      createTime: new Date()
+                    };
+                    
+                    // Recreate matchers
+                    if (exp.matchers && Array.isArray(exp.matchers)) {
+                      exp.matchers.forEach(matcher => {
+                        if (matcher.type === "path") {
+                          newExp.matchers.push({
+                            id: uuId(),
+                            type: matcher.type,
+                            conditions: matcher.conditions,
+                            value: matcher.value
+                          });
+                        } else if (matcher.type === "method") {
+                          newExp.matchers.push({
+                            id: uuId(),
+                            type: matcher.type,
+                            conditions: matcher.conditions,
+                            value: matcher.value
+                          });
+                        } else if (matcher.type === "header" || matcher.type === "query" || matcher.type === "param") {
+                          newExp.matchers.push({
+                            id: uuId(),
+                            type: matcher.type,
+                            conditions: matcher.conditions,
+                            name: matcher.name,
+                            value: matcher.value
+                          });
+                        }
+                      });
+                    }
+                    
+                    // Recreate actions
+                    if (exp.actions && Array.isArray(exp.actions)) {
+                      exp.actions.forEach(action => {
+                        if (action.type === "PROXY") {
+                          newExp.actions.push({
+                            id: uuId(),
+                            type: action.type,
+                            protocol: action.protocol,
+                            host: action.host,
+                            handleCross: action.handleCross,
+                            crossAllowCredentials: action.crossAllowCredentials,
+                            supportWebsocket: action.supportWebsocket,
+                            pathRewrite: action.pathRewrite ? action.pathRewrite.map(pr => ({
+                              type: pr.type,
+                              value: pr.value
+                            })) : [],
+                            prefixRemove: action.prefixRemove,
+                            headers: action.headers ? [...action.headers] : undefined,
+                            requestHeaders: action.requestHeaders ? [...action.requestHeaders] : undefined
+                          });
+                        } else if (action.type === "CUSTOM_RESPONSE") {
+                          const responseContent = action.responseContent ? {
+                            headers: action.responseContent.headers ? [...action.responseContent.headers] : [],
+                            type: action.responseContent.type,
+                            value: action.responseContent.value,
+                            contentHandler: action.responseContent.contentHandler
+                          } : null;
+                          
+                          if (responseContent) {
+                            newExp.actions.push({
+                              id: uuId(),
+                              type: action.type,
+                              status: action.status,
+                              responseContent
+                            });
+                          }
+                        }
+                      });
+                    }
+                    
+                    return createExpectationReq(currentProject.id, newExp);
+                  });
+                  
+                  Promise.all(importPromises)
+                    .then(() => {
+                      message.success(`${importedExpectations.length} beklenti başarıyla içe aktarıldı.`);
+                      getExpectationListQuery.refetch();
+                    })
+                    .catch(err => {
+                      message.error(`İçe aktarma sırasında hata oluştu: ${err.message}`);
+                    });
+                  
+                } catch (error) {
+                  message.error(`Dosya işlenirken hata oluştu: ${error.message}`);
+                }
+                return false; // Prevent default upload behavior
+              };
+              reader.readAsText(file);
+              return false; // Prevent default upload behavior
+            }}
+          >
+            <Button type="text" icon={<UploadOutlined />}>
+              Import
+            </Button>
+          </Upload>
         </div>
         <div>
           <Table
