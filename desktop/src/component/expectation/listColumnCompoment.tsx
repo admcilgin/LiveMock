@@ -223,6 +223,52 @@ export const ActivateColumn = ({
   );
 };
 
+export const GroupColumn = ({
+  projectId,
+  text,
+  expectation,
+  index,
+  dispatch,
+}: {
+  projectId: string;
+  text: string;
+  expectation: ExpectationM;
+  index: number;
+  dispatch: AppDispatch;
+}) => {
+  const { data, run } = useRequest(updateExpectation, {
+    debounceWait: debounceWait,
+    manual: true,
+  });
+  return (
+    <div style={{
+      width:"150px"
+    }}>
+      <Input
+        placeholder={"Grup"}
+        value={expectation.group || ""}
+        onChange={(
+          event: ChangeEvent<{
+            value: string;
+          }>
+        ) => {
+          run(projectId, expectation.id, {
+            group: event.target.value,
+          });
+          dispatch(
+            updateExpectationItem({
+              expectationId: expectation.id,
+              modifyValues: {
+                group: event.target.value,
+              },
+            })
+          );
+        }}
+      />
+    </div>
+  );
+};
+
 export const MatcherColumn = ({
   projectId,
   text,

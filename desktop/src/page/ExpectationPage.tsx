@@ -1,5 +1,5 @@
-import { App, Button, Table, Upload, message } from "antd";
-import { PlusOutlined, UploadOutlined, DownloadOutlined } from "@ant-design/icons";
+import { App, Button, Table, Upload, message, Select, Input, Space } from "antd";
+import { PlusOutlined, UploadOutlined, DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import { AppDispatch, useAppSelector } from "../store";
 import {
   createExpectationReq,
@@ -11,6 +11,7 @@ import {
   ActionColumn,
   ActivateColumn,
   DelayColumn,
+  GroupColumn,
   MatcherColumn,
   NameColumn,
   OperationColumn,
@@ -22,6 +23,9 @@ import { toastPromise } from "../component/common";
 import { getExpectationSuccess } from "../slice/thunk";
 import { ExpectationContext } from "src/component/context";
 import { saveAs } from 'file-saver';
+import { useState, useMemo } from "react";
+
+const { Option } = Select;
 
 const ExpectationPage = () => {
   const { modal } = App.useApp();
@@ -29,6 +33,8 @@ const ExpectationPage = () => {
   const expectationState = useAppSelector((state) => state.expectation);
   const currentProject = projectState.projectList[projectState.curProjectIndex];
   const dispatch: AppDispatch = useDispatch();
+  const [selectedGroup, setSelectedGroup] = useState<string>("");
+  
   const getExpectationListQuery = useQuery(
     ["getExpectationList", currentProject.id],
     () => {
@@ -38,6 +44,25 @@ const ExpectationPage = () => {
       });
     }
   );
+  
+  // Mevcut tüm grupları al
+  const availableGroups = useMemo(() => {
+    const groups = new Set<string>();
+    expectationState.expectationList.forEach(exp => {
+      if (exp.group) {
+        groups.add(exp.group);
+      }
+    });
+    return Array.from(groups);
+  }, [expectationState.expectationList]);
+  
+  // Filtrelenmiş expectations listesi
+  const filteredExpectations = useMemo(() => {
+    if (!selectedGroup) {
+      return expectationState.expectationList;
+    }
+    return expectationState.expectationList.filter(exp => exp.group === selectedGroup);
+  }, [expectationState.expectationList, selectedGroup]);
 
   const expectationColumn = [
     {
@@ -47,6 +72,22 @@ const ExpectationPage = () => {
       render: (text: string, record: ExpectationM, index: number) => {
         return (
           <NameColumn
+            projectId={currentProject.id}
+            text={text}
+            expectation={record}
+            index={index}
+            dispatch={dispatch}
+          />
+        );
+      },
+    },
+    {
+      title: "group",
+      dataIndex: "group",
+      key: "group",
+      render: (text: string, record: ExpectationM, index: number) => {
+        return (
+          <GroupColumn
             projectId={currentProject.id}
             text={text}
             expectation={record}
@@ -163,7 +204,7 @@ const ExpectationPage = () => {
       }}
     >
       <div style={{ padding: "10px" }}>
-        <div style={{ margin: "10px 0px", display: "flex", gap: "10px" }}>
+        <div style={{ margin: "10px 0px", display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
           <Button
             type={"text"}
             icon={<PlusOutlined />}
@@ -186,14 +227,14 @@ const ExpectationPage = () => {
             icon={<DownloadOutlined />}
             onClick={() => {
               // Export expectations as JSON
-              if (expectationState.expectationList.length === 0) {
+              if (filteredExpectations.length === 0) {
                 message.warning("Dışa aktarılacak beklenti bulunamadı.");
                 return;
               }
               
-              const exportData = JSON.stringify(expectationState.expectationList, null, 2);
+              const exportData = JSON.stringify(filteredExpectations, null, 2);
               const blob = new Blob([exportData], { type: "application/json" });
-              saveAs(blob, `expectations-${currentProject.name}-${new Date().toISOString().slice(0, 10)}.json`);
+              saveAs(blob, `expectations-${currentProject.name}-${selectedGroup ? selectedGroup + "-" : ""}${new Date().toISOString().slice(0, 10)}.json`);
               message.success("Beklentiler başarıyla dışa aktarıldı.");
             }}
           >
@@ -229,7 +270,8 @@ const ExpectationPage = () => {
                       activate: exp.activate,
                       matchers: [],
                       actions: [],
-                      createTime: new Date()
+                      createTime: new Date(),
+                      group: exp.group || ""
                     };
                     
                     console.log(`Import - Created new expectation with ID: ${newExp.id}`);
@@ -334,7 +376,7 @@ const ExpectationPage = () => {
                       message.error(`İçe aktarma sırasında hata oluştu: ${err.message}`);
                     });
                   
-                } catch (error) {
+                } catch (error: any) {
                   console.error("Import - Error parsing file:", error);
                   message.error(`Dosya işlenirken hata oluştu: ${error.message}`);
                 }
@@ -348,13 +390,28 @@ const ExpectationPage = () => {
               Import
             </Button>
           </Upload>
+          
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
+            <span>Group Filter:</span>
+            <Select 
+              style={{ width: 200 }} 
+              placeholder="Select Group"
+              allowClear
+              value={selectedGroup}
+              onChange={value => setSelectedGroup(value)}
+            >
+              {availableGroups.map(group => (
+                <Option key={group} value={group}>{group}</Option>
+              ))}
+            </Select>
+          </div>
         </div>
         <div>
           <Table
             columns={expectationColumn}
             size={"small"}
             rowKey={"id"}
-            dataSource={expectationState.expectationList}
+            dataSource={filteredExpectations}
             loading={getExpectationListQuery.isFetching}
           />
         </div>

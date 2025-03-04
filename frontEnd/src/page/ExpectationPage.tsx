@@ -1,5 +1,5 @@
-import { App, Button, Table, Upload, message } from "antd";
-import { PlusOutlined, UploadOutlined, DownloadOutlined } from "@ant-design/icons";
+import { App, Button, Table, Upload, message, Select, Space } from "antd";
+import { PlusOutlined, UploadOutlined, DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import { AppDispatch, useAppSelector } from "../store";
 import {
   createExpectationReq,
@@ -11,6 +11,7 @@ import {
   ActionColumn,
   ActivateColumn,
   DelayColumn,
+  GroupColumn,
   MatcherColumn,
   NameColumn,
   OperationColumn,
@@ -21,9 +22,11 @@ import { useQuery } from "@tanstack/react-query";
 import { toastPromise } from "../component/common";
 import { getExpectationSuccess } from "../slice/thunk";
 import { NInput } from "../component/nui/NInput";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ExpectationContext } from "../component/context";
 import { saveAs } from 'file-saver';
+
+const { Option } = Select;
 
 const ExpectationPage = () => {
   const { modal } = App.useApp();
@@ -40,6 +43,22 @@ const ExpectationPage = () => {
       });
     },
   );
+
+  const [selectedGroup, setSelectedGroup] = useState<string | undefined>(undefined);
+
+  // Mevcut grupları topla
+  const availableGroups = useMemo(() => {
+    const groups = expectationState.expectationList
+      .map(exp => exp.group)
+      .filter((group): group is string => !!group);
+    return [...new Set(groups)].sort();
+  }, [expectationState.expectationList]);
+
+  // Filtrelenmiş beklentiler listesi
+  const filteredExpectations = useMemo(() => {
+    if (!selectedGroup) return expectationState.expectationList;
+    return expectationState.expectationList.filter(exp => exp.group === selectedGroup);
+  }, [expectationState.expectationList, selectedGroup]);
 
   const expectationColumn = [
     {
@@ -155,6 +174,22 @@ const ExpectationPage = () => {
         );
       },
     },
+    {
+      title: "grup",
+      dataIndex: "group",
+      key: "group",
+      render: (text: string, record: ExpectationM, index: number) => {
+        return (
+          <GroupColumn
+            projectId={currentProject.id}
+            text={text}
+            expectation={record}
+            index={index}
+            dispatch={dispatch}
+          />
+        );
+      },
+    },
   ];
   return (
     <ExpectationContext.Provider
@@ -165,7 +200,7 @@ const ExpectationPage = () => {
       }}
     >
       <div style={{ padding: "10px" }}>
-        <div style={{ margin: "10px 0px", display: "flex", gap: "10px" }}>
+        <div style={{ margin: "10px 0px", display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
           <Button
             type={"text"}
             icon={<PlusOutlined />}
@@ -188,14 +223,14 @@ const ExpectationPage = () => {
             icon={<DownloadOutlined />}
             onClick={() => {
               // Export expectations as JSON
-              if (expectationState.expectationList.length === 0) {
+              if (filteredExpectations.length === 0) {
                 message.warning("Dışa aktarılacak beklenti bulunamadı.");
                 return;
               }
               
-              const exportData = JSON.stringify(expectationState.expectationList, null, 2);
+              const exportData = JSON.stringify(filteredExpectations, null, 2);
               const blob = new Blob([exportData], { type: "application/json" });
-              saveAs(blob, `expectations-${currentProject.name}-${new Date().toISOString().slice(0, 10)}.json`);
+              saveAs(blob, `expectations-${currentProject.name}-${selectedGroup ? selectedGroup + "-" : ""}${new Date().toISOString().slice(0, 10)}.json`);
               message.success("Beklentiler başarıyla dışa aktarıldı.");
             }}
           >
@@ -307,10 +342,12 @@ const ExpectationPage = () => {
                       getExpectationListQuery.refetch();
                     })
                     .catch(err => {
+                      console.error("Import - Error during import:", err);
                       message.error(`İçe aktarma sırasında hata oluştu: ${err.message}`);
                     });
                   
-                } catch (error) {
+                } catch (error: any) {
+                  console.error("Import - Error parsing file:", error);
                   message.error(`Dosya işlenirken hata oluştu: ${error.message}`);
                 }
                 return false; // Prevent default upload behavior
@@ -323,13 +360,27 @@ const ExpectationPage = () => {
               Import
             </Button>
           </Upload>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
+            <span>Group Filter:</span>
+            <Select 
+              style={{ width: 200 }} 
+              placeholder="Select Group"
+              allowClear
+              value={selectedGroup}
+              onChange={value => setSelectedGroup(value)}
+            >
+              {availableGroups.map(group => (
+                <Option key={group} value={group}>{group}</Option>
+              ))}
+            </Select>
+          </div>
         </div>
         <div>
           <Table
             columns={expectationColumn}
             size={"small"}
             rowKey={"id"}
-            dataSource={expectationState.expectationList}
+            dataSource={filteredExpectations}
             loading={getExpectationListQuery.isFetching}
           />
         </div>
