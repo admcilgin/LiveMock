@@ -14,32 +14,37 @@ on:
 jobs:
   create_release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.event.inputs.version || github.ref }}
-          release_name: Release ${{ github.event.inputs.version || github.ref }}
+          name: Release ${{ github.event.inputs.version || github.ref }}
           draft: false
           prerelease: false
+          generate_release_notes: true
 
   build-mac:
     needs: create_release
     runs-on: macos-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: moim-features
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'yarn'
@@ -64,27 +69,27 @@ jobs:
           echo "Found DMG at: ${DMG_PATH}"
 
       - name: Upload macOS DMG
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ${{ env.DMG_PATH }}
-          asset_name: ${{ env.DMG_NAME }}
-          asset_content_type: application/octet-stream
+          tag_name: ${{ github.event.inputs.version || github.ref }}
+          files: ${{ env.DMG_PATH }}
 
   build-windows:
     needs: create_release
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: moim-features
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'yarn'
@@ -110,27 +115,27 @@ jobs:
           echo "Found EXE at: $EXE_PATH"
 
       - name: Upload Windows EXE
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ${{ env.EXE_PATH }}
-          asset_name: ${{ env.EXE_NAME }}
-          asset_content_type: application/octet-stream
+          tag_name: ${{ github.event.inputs.version || github.ref }}
+          files: ${{ env.EXE_PATH }}
 
   build-linux:
     needs: create_release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: moim-features
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'yarn'
@@ -160,11 +165,9 @@ jobs:
           echo "Found AppImage at: ${APPIMAGE_PATH}"
 
       - name: Upload Linux AppImage
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ${{ env.APPIMAGE_PATH }}
-          asset_name: ${{ env.APPIMAGE_NAME }}
-          asset_content_type: application/octet-stream
+          tag_name: ${{ github.event.inputs.version || github.ref }}
+          files: ${{ env.APPIMAGE_PATH }}
