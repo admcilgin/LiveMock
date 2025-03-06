@@ -1,9 +1,10 @@
-import { App, Button, Table, Upload, message, Select, Space } from "antd";
-import { PlusOutlined, UploadOutlined, DownloadOutlined, FilterOutlined } from "@ant-design/icons";
+import { App, Button, Table, Upload, message, Select, Space, Modal } from "antd";
+import { PlusOutlined, UploadOutlined, DownloadOutlined, FilterOutlined, DeleteOutlined } from "@ant-design/icons";
 import { AppDispatch, useAppSelector } from "../store";
 import {
   createExpectationReq,
   listExpectationReq,
+  deleteExpectationReq,
 } from "../server/expectationServer";
 import { createExpectation, ExpectationM } from "livemock-core/struct/expectation";
 import { v4 as uuId } from "uuid";
@@ -34,6 +35,8 @@ const ExpectationPage = () => {
   const expectationState = useAppSelector((state) => state.expectation);
   const currentProject = projectState.projectList[projectState.curProjectIndex];
   const dispatch: AppDispatch = useDispatch();
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const getExpectationListQuery = useQuery(
     ["getExpectationList", currentProject.id],
     () => {
@@ -59,6 +62,49 @@ const ExpectationPage = () => {
     if (!selectedGroup) return expectationState.expectationList;
     return expectationState.expectationList.filter(exp => exp.group === selectedGroup);
   }, [expectationState.expectationList, selectedGroup]);
+
+  // Toplu silme işlemi
+  const handleBulkDelete = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning("Please select the expectations to delete.");
+      return;
+    }
+    
+    Modal.confirm({
+      title: "Delete Expectations",
+      content: `${selectedRowKeys.length} expectations to delete. Are you sure?`,
+      okText: "Yes",
+      okType: "danger",
+      cancelText: "No",
+      onOk: async () => {
+        setIsDeleting(true);
+        try {
+          const deletePromises = selectedRowKeys.map(key => {
+            console.log(`Deleting expectation with ID: ${key}`);
+            return deleteExpectationReq(currentProject.id, key.toString());
+          });
+          
+          await Promise.all(deletePromises);
+          message.success(`${selectedRowKeys.length} expectations deleted successfully.`);
+          setSelectedRowKeys([]);
+          getExpectationListQuery.refetch();
+        } catch (error: any) {
+          console.error("Error deleting expectations:", error);
+          message.error(`An error occurred during the deletion process: ${error.message}`);
+        } finally {
+          setIsDeleting(false);
+        }
+      }
+    });
+  };
+  
+  // Tablo seçim özellikleri
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (newSelectedRowKeys: React.Key[]) => {
+      setSelectedRowKeys(newSelectedRowKeys);
+    }
+  };
 
   const expectationColumn = [
     {
@@ -218,6 +264,19 @@ const ExpectationPage = () => {
           >
             Add Expectation
           </Button>
+          
+          {selectedRowKeys.length > 0 && (
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={handleBulkDelete}
+              loading={isDeleting}
+            >
+              Seçilenleri Sil ({selectedRowKeys.length})
+            </Button>
+          )}
+          
           <Button
             type={"text"}
             icon={<DownloadOutlined />}
@@ -377,11 +436,12 @@ const ExpectationPage = () => {
         </div>
         <div>
           <Table
+            rowSelection={rowSelection}
             columns={expectationColumn}
             size={"small"}
             rowKey={"id"}
             dataSource={filteredExpectations}
-            loading={getExpectationListQuery.isFetching}
+            loading={getExpectationListQuery.isFetching || isDeleting}
           />
         </div>
       </div>

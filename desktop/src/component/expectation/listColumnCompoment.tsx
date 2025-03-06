@@ -1,5 +1,5 @@
 import { duplicateExpectation, ExpectationM } from "livemock-core/struct/expectation";
-import { Button, Input, InputNumber, Switch } from "antd";
+import { Button, Input, InputNumber, Switch, Dropdown, Menu } from "antd";
 import { ChangeEvent } from "react";
 import { AppDispatch } from "../../store";
 import {
@@ -24,7 +24,7 @@ import * as React from "react";
 import {MatcherContext, ActionContext, useExpectationContext} from "../context";
 import MatcherItem from "../matcher/MatcherItem";
 import { CopyOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import { createPathMatcher } from "livemock-core/struct/matcher";
+import { createPathMatcher, createRawBodyMatcher } from "livemock-core/struct/matcher";
 import {
   createMatcherReq,
   deleteMatcherReq,
@@ -349,40 +349,70 @@ export const MatcherAddBtn = ({
   projectId: string;
   expectationId: string;
 }) => {
+  const addPathMatcher = () => {
+    const newMatcher = createPathMatcher();
+    dispatch(
+      addMatcher({
+        expectationIndex: expectationIndex,
+        matcher: newMatcher,
+      })
+    );
+    const createPromise = createMatcherReq({
+      projectId: projectId,
+      expectationId: expectationId,
+      matcher: newMatcher,
+    });
+    toastPromise(createPromise);
+  };
+
+  const addRawBodyMatcher = () => {
+    const newMatcher = createRawBodyMatcher();
+    dispatch(
+      addMatcher({
+        expectationIndex: expectationIndex,
+        matcher: newMatcher,
+      })
+    );
+    const createPromise = createMatcherReq({
+      projectId: projectId,
+      expectationId: expectationId,
+      matcher: newMatcher,
+    });
+    toastPromise(createPromise);
+  };
+
+  const menu = (
+    <Menu>
+      <Menu.Item key="path" onClick={addPathMatcher}>
+        Path Matcher
+      </Menu.Item>
+      <Menu.Item key="rawbody" onClick={addRawBodyMatcher}>
+        RawBody Matcher
+      </Menu.Item>
+    </Menu>
+  );
+
   return (
-    <Button
-      type="text"
-      onClick={() => {
-        const newMatcher = createPathMatcher();
-        dispatch(
-          addMatcher({
-            expectationIndex: expectationIndex,
-            matcher: newMatcher,
-          })
-        );
-        const createPromise = createMatcherReq({
-          projectId: projectId,
-          expectationId: expectationId,
-          matcher: newMatcher,
-        });
-        toastPromise(createPromise);
-      }}
-      style={{
-        fontSize: "14px",
-        color: "#8c8c8c",
-        lineHeight: "1.57",
-      }}
-      icon={
-        <PlusOutlined
-          style={{
-            position: "relative",
-            top: "0px",
-          }}
-        />
-      }
-    >
-      Add Matcher
-    </Button>
+    <Dropdown overlay={menu} trigger={['click']}>
+      <Button
+        type="text"
+        style={{
+          fontSize: "14px",
+          color: "#8c8c8c",
+          lineHeight: "1.57",
+        }}
+        icon={
+          <PlusOutlined
+            style={{
+              position: "relative",
+              top: "0px",
+            }}
+          />
+        }
+      >
+        Add Matcher
+      </Button>
+    </Dropdown>
   );
 };
 

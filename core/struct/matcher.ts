@@ -6,7 +6,8 @@ export type RequestMatcherM =
   | PathMatcherM
   | HeaderMatcherM
   | QueryMatcherM
-  | ParamMatcherM;
+  | ParamMatcherM
+  | RawBodyMatcherM;
 
 export enum RequestMatcherType {
   METHOD = "method",
@@ -14,6 +15,7 @@ export enum RequestMatcherType {
   HEADER = "header",
   QUERY = "query",
   PARAM = "param",
+  RAWBODY = "rawbody",
   // todo support code
   // CODE = "code",
 }
@@ -51,6 +53,13 @@ export type ParamMatcherM = {
   type: RequestMatcherType.PARAM;
   conditions: MatcherCondition;
   name: string;
+  value: string;
+};
+
+export type RawBodyMatcherM = {
+  id: string;
+  type: RequestMatcherType.RAWBODY;
+  conditions: MatcherCondition;
   value: string;
 };
 
@@ -144,6 +153,15 @@ export function createQueryMatcher(): QueryMatcherM {
     value: "",
   };
 }
+export function createRawBodyMatcher(): RawBodyMatcherM {
+  return {
+    id: uuId(),
+    type: RequestMatcherType.RAWBODY,
+    conditions: MatcherCondition.CONTAINS,
+    value: "",
+  };
+}
+
 export const matcherHasName = (matcher: RequestMatcherM) => {
   return [
     RequestMatcherType.HEADER,

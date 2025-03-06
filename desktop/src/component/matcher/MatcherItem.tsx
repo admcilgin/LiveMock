@@ -7,7 +7,9 @@ import {
   QueryMatcherM,
   RequestMatcherM,
   RequestMatcherHasName,
-  RequestMatcherType, matcherHasValue,
+  RequestMatcherType,
+  matcherHasValue,
+  RawBodyMatcherM,
 } from "livemock-core/struct/matcher";
 import styles from "./MatcherItem.module.css";
 import { Dropdown } from "antd";
@@ -100,6 +102,15 @@ const MatcherItem: FC<{
             name: "",
           };
           matcherContext.onMatcherModify(_paramMatcher);
+          break;
+        case RequestMatcherType.RAWBODY:
+          let _rawBodyMatcher: RawBodyMatcherM = {
+            id: matcher.id,
+            type: RequestMatcherType.RAWBODY,
+            conditions: matcher.conditions,
+            value: matcher.value,
+          };
+          matcherContext.onMatcherModify(_rawBodyMatcher);
           break;
         default:
           break;
