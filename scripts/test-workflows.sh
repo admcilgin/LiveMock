@@ -15,11 +15,16 @@ fi
 
 # Workflow'ları test et
 echo "Desktop Build workflow'unu test ediliyor..."
-act -j build-mac,build-windows,build-linux -W .github/workflows/desktop-build.yml --dryrun
+act -j build-mac -W .github/workflows/desktop-build.yml --dryrun
+act -j build-windows -W .github/workflows/desktop-build.yml --dryrun
+act -j build-linux -W .github/workflows/desktop-build.yml --dryrun
 
 echo ""
 echo "Desktop Release workflow'unu test ediliyor..."
-act -j create-release,build-mac,build-windows,build-linux -W .github/workflows/desktop-release.yml --dryrun
+act -j create-release -W .github/workflows/desktop-release.yml --dryrun
+act -j build-mac -W .github/workflows/desktop-release.yml --dryrun
+act -j build-windows -W .github/workflows/desktop-release.yml --dryrun
+act -j build-linux -W .github/workflows/desktop-release.yml --dryrun
 
 echo ""
 echo "Test tamamlandı."

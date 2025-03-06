@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -38,18 +40,24 @@ jobs:
         run: yarn workspace livemock build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: List release directory
+        run: find desktop/release -type f -name "*.dmg"
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v3
         with:
           name: mac-build
           path: desktop/release/**/*.dmg
+          if-no-files-found: warn
 
   build-windows:
     runs-on: windows-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -68,17 +76,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: List release directory
+        run: dir desktop\release /s /b | findstr ".exe"
+        shell: cmd
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v3
         with:
           name: windows-build
           path: desktop/release/**/*.exe
+          if-no-files-found: warn
 
   build-linux:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -102,6 +117,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: List release directory
+        run: find desktop/release -type f -name "*.AppImage" -o -name "*.deb"
+
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -109,3 +127,4 @@ jobs:
           path: |
             desktop/release/**/*.AppImage
             desktop/release/**/*.deb
+          if-no-files-found: warn

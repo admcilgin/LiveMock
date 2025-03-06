@@ -1,4 +1,4 @@
- name: Desktop Release
+name: Desktop Release
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  create-release:
+  create_release:
     runs-on: ubuntu-latest
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
@@ -23,13 +23,14 @@ jobs:
           prerelease: false
 
   build-mac:
-    needs: create-release
+    needs: create_release
     runs-on: macos-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           ref: moim-features
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -47,25 +48,34 @@ jobs:
         run: yarn workspace livemock build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Find DMG file
+        id: find_dmg
+        run: |
+          DMG_PATH=$(find desktop/release -type f -name "*.dmg" | head -n 1)
+          echo "DMG_PATH=${DMG_PATH}" >> $GITHUB_ENV
+          echo "DMG_NAME=$(basename ${DMG_PATH})" >> $GITHUB_ENV
+          echo "Found DMG at: ${DMG_PATH}"
 
       - name: Upload macOS DMG
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./desktop/release/**/*.dmg
-          asset_name: livemock-mac.dmg
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ${{ env.DMG_PATH }}
+          asset_name: ${{ env.DMG_NAME }}
           asset_content_type: application/octet-stream
 
   build-windows:
-    needs: create-release
+    needs: create_release
     runs-on: windows-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           ref: moim-features
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -84,24 +94,34 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Find EXE file
+        id: find_exe
+        shell: pwsh
+        run: |
+          $EXE_PATH = (Get-ChildItem -Path desktop\release -Recurse -Filter "*.exe" | Select-Object -First 1).FullName
+          echo "EXE_PATH=$EXE_PATH" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "EXE_NAME=$(Split-Path -Leaf $EXE_PATH)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "Found EXE at: $EXE_PATH"
+
       - name: Upload Windows EXE
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./desktop/release/**/*.exe
-          asset_name: livemock-win.exe
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ${{ env.EXE_PATH }}
+          asset_name: ${{ env.EXE_NAME }}
           asset_content_type: application/octet-stream
 
   build-linux:
-    needs: create-release
+    needs: create_release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           ref: moim-features
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -125,12 +145,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Find AppImage file
+        id: find_appimage
+        run: |
+          APPIMAGE_PATH=$(find desktop/release -type f -name "*.AppImage" | head -n 1)
+          echo "APPIMAGE_PATH=${APPIMAGE_PATH}" >> $GITHUB_ENV
+          echo "APPIMAGE_NAME=$(basename ${APPIMAGE_PATH})" >> $GITHUB_ENV
+          echo "Found AppImage at: ${APPIMAGE_PATH}"
+
       - name: Upload Linux AppImage
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./desktop/release/**/*.AppImage
-          asset_name: livemock-linux.AppImage
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ${{ env.APPIMAGE_PATH }}
+          asset_name: ${{ env.APPIMAGE_NAME }}
           asset_content_type: application/octet-stream
