@@ -47,10 +47,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'yarn'
+
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@4.5.2 --activate
 
       - name: Install dependencies
-        run: yarn install
+        run: |
+          yarn config set nodeLinker node-modules
+          yarn install
 
       - name: Build core
         run: yarn workspace livemock-core build
@@ -92,10 +98,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'yarn'
+
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@4.5.2 --activate
 
       - name: Install dependencies
-        run: yarn install
+        run: |
+          yarn config set nodeLinker node-modules
+          yarn install
 
       - name: Build core
         run: yarn workspace livemock-core build
@@ -138,10 +150,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'yarn'
+
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@4.5.2 --activate
 
       - name: Install dependencies
-        run: yarn install
+        run: |
+          yarn config set nodeLinker node-modules
+          yarn install
 
       - name: Install Linux dependencies
         run: |
