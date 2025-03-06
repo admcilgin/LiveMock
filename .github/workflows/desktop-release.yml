@@ -3,7 +3,13 @@ name: Desktop Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release'
+        required: true
+        type: string
 
 jobs:
   create_release:
@@ -17,8 +23,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ github.event.inputs.version || github.ref }}
+          release_name: Release ${{ github.event.inputs.version || github.ref }}
           draft: false
           prerelease: false
 
