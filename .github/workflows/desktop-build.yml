@@ -63,6 +63,8 @@ jobs:
       - name: Install dependencies
         run: |
           yarn config set nodeLinker node-modules
+          yarn config set networkTimeout 300000
+          yarn config set httpTimeout 300000
           yarn install
 
       - name: Build core
@@ -71,7 +73,7 @@ jobs:
       - name: Verify core build
         run: |
           echo "Checking core build output..."
-          dir core\build
+          ls -la core/build/
           echo "Core build completed successfully"
 
       - name: Build desktop app
@@ -83,8 +85,8 @@ jobs:
       - name: Verify desktop build
         run: |
           echo "Checking desktop build output..."
-          dir desktop\dist-electron
-          dir desktop\dist
+          ls -la desktop/dist-electron/
+          ls -la desktop/dist/
           echo "Desktop build completed successfully"
 
       - name: List release directory
@@ -133,6 +135,8 @@ jobs:
       - name: Install dependencies
         run: |
           yarn config set nodeLinker node-modules
+          yarn config set networkTimeout 300000
+          yarn config set httpTimeout 300000
           yarn install
 
       - name: Build core
@@ -141,13 +145,21 @@ jobs:
       - name: Verify core build
         run: |
           echo "Checking core build output..."
-          ls -la core/build/
+          dir core\build
           echo "Core build completed successfully"
 
       - name: Build desktop app
         run: yarn workspace desktop build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEBUG: electron-builder
+
+      - name: Verify desktop build
+        run: |
+          echo "Checking desktop build output..."
+          dir desktop\dist-electron
+          dir desktop\dist
+          echo "Desktop build completed successfully"
 
       - name: List release directory
         run: dir desktop\release /s /b | findstr ".exe"
@@ -196,12 +208,15 @@ jobs:
       - name: Install dependencies
         run: |
           yarn config set nodeLinker node-modules
+          yarn config set networkTimeout 300000
+          yarn config set httpTimeout 300000
           yarn install
 
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y build-essential git python3
 
       - name: Build core
         run: yarn workspace livemock-core build
