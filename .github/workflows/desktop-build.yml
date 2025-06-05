@@ -147,6 +147,7 @@ jobs:
           echo "Checking core build output..."
           dir core\build
           echo "Core build completed successfully"
+        shell: cmd
 
       - name: Build desktop app
         run: yarn workspace desktop build
@@ -160,6 +161,7 @@ jobs:
           dir desktop\dist-electron
           dir desktop\dist
           echo "Desktop build completed successfully"
+        shell: cmd
 
       - name: List release directory
         run: dir desktop\release /s /b | findstr ".exe"
