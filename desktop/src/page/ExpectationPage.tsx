@@ -1,5 +1,5 @@
 import { App, Button, Table, Upload, message, Select, Input, Space, Modal } from "antd";
-import { PlusOutlined, UploadOutlined, DownloadOutlined, FilterOutlined, DeleteOutlined } from "@ant-design/icons";
+import { PlusOutlined, UploadOutlined, DownloadOutlined, FilterOutlined, DeleteOutlined, SearchOutlined } from "@ant-design/icons";
 import { AppDispatch, useAppSelector } from "../store";
 import {
   createExpectationReq,
@@ -37,6 +37,7 @@ const ExpectationPage = () => {
   const [selectedGroup, setSelectedGroup] = useState<string>("");
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [searchText, setSearchText] = useState<string>("");
   
   const getExpectationListQuery = useQuery(
     ["getExpectationList", currentProject.id],
@@ -61,11 +62,34 @@ const ExpectationPage = () => {
   
   // Filtrelenmiş expectations listesi
   const filteredExpectations = useMemo(() => {
-    if (!selectedGroup) {
-      return expectationState.expectationList;
+    let filtered = expectationState.expectationList;
+    
+    // Grup filtresi
+    if (selectedGroup) {
+      filtered = filtered.filter(exp => exp.group === selectedGroup);
     }
-    return expectationState.expectationList.filter(exp => exp.group === selectedGroup);
-  }, [expectationState.expectationList, selectedGroup]);
+    
+    // Path araması
+    if (searchText.trim()) {
+      const searchLower = searchText.toLowerCase().trim();
+      filtered = filtered.filter(exp => {
+        // Expectation adında arama
+        if (exp.name && exp.name.toLowerCase().includes(searchLower)) {
+          return true;
+        }
+        
+        // PATH matcher'larında arama
+        return exp.matchers.some(matcher => {
+          if (matcher.type === 'path' && matcher.value) {
+            return matcher.value.toLowerCase().includes(searchLower);
+          }
+          return false;
+        });
+      });
+    }
+    
+    return filtered;
+  }, [expectationState.expectationList, selectedGroup, searchText]);
 
   // Toplu silme işlemi
   const handleBulkDelete = () => {
@@ -451,6 +475,14 @@ const ExpectationPage = () => {
           </Upload>
           
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
+            <Input
+              placeholder="Path veya isim ile ara..."
+              prefix={<SearchOutlined />}
+              allowClear
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{ width: 250 }}
+            />
             <span>Group Filter:</span>
             <Select 
               style={{ width: 200 }} 

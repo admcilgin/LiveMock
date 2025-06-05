@@ -1,7 +1,7 @@
 import ws from "ws";
 import { WebsocketStatus } from "livemock-core/struct/log";
 
-let websocketGroupMap = new Map<number, WebsocketGroupItem>();
+const websocketGroupMap = new Map<number, WebsocketGroupItem>();
 
 export interface WebsocketGroupItem {
   requestId: number;
