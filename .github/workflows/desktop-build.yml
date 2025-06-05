@@ -48,6 +48,18 @@ jobs:
           corepack enable
           corepack prepare yarn@4.5.2 --activate
 
+      - name: Cache yarn dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/yarn
+            node_modules
+            desktop/node_modules
+            core/node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
       - name: Install dependencies
         run: |
           yarn config set nodeLinker node-modules
@@ -56,10 +68,24 @@ jobs:
       - name: Build core
         run: yarn workspace livemock-core build
 
+      - name: Verify core build
+        run: |
+          echo "Checking core build output..."
+          dir core\build
+          echo "Core build completed successfully"
+
       - name: Build desktop app
-        run: yarn workspace livemock build
+        run: yarn workspace desktop build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEBUG: electron-builder
+
+      - name: Verify desktop build
+        run: |
+          echo "Checking desktop build output..."
+          dir desktop\dist-electron
+          dir desktop\dist
+          echo "Desktop build completed successfully"
 
       - name: List release directory
         run: find desktop/release -type f -name "*.dmg"
@@ -92,6 +118,18 @@ jobs:
           corepack enable
           corepack prepare yarn@4.5.2 --activate
 
+      - name: Cache yarn dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/yarn
+            node_modules
+            desktop/node_modules
+            core/node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
       - name: Install dependencies
         run: |
           yarn config set nodeLinker node-modules
@@ -100,8 +138,14 @@ jobs:
       - name: Build core
         run: yarn workspace livemock-core build
 
+      - name: Verify core build
+        run: |
+          echo "Checking core build output..."
+          ls -la core/build/
+          echo "Core build completed successfully"
+
       - name: Build desktop app
-        run: yarn workspace livemock build
+        run: yarn workspace desktop build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -137,6 +181,18 @@ jobs:
           corepack enable
           corepack prepare yarn@4.5.2 --activate
 
+      - name: Cache yarn dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/yarn
+            node_modules
+            desktop/node_modules
+            core/node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
       - name: Install dependencies
         run: |
           yarn config set nodeLinker node-modules
@@ -150,10 +206,24 @@ jobs:
       - name: Build core
         run: yarn workspace livemock-core build
 
+      - name: Verify core build
+        run: |
+          echo "Checking core build output..."
+          ls -la core/build/
+          echo "Core build completed successfully"
+
       - name: Build desktop app
-        run: yarn workspace livemock build
+        run: yarn workspace desktop build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEBUG: electron-builder
+
+      - name: Verify desktop build
+        run: |
+          echo "Checking desktop build output..."
+          ls -la desktop/dist-electron/
+          ls -la desktop/dist/
+          echo "Desktop build completed successfully"
 
       - name: List release directory
         run: find desktop/release -type f -name "*.AppImage" -o -name "*.deb"

@@ -40,7 +40,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: moim-features
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -62,7 +61,7 @@ jobs:
         run: yarn workspace livemock-core build
 
       - name: Build desktop app
-        run: yarn workspace livemock build
+        run: yarn workspace desktop build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -91,7 +90,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: moim-features
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -113,7 +111,7 @@ jobs:
         run: yarn workspace livemock-core build
 
       - name: Build desktop app
-        run: yarn workspace livemock build
+        run: yarn workspace desktop build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -143,7 +141,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: moim-features
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -170,7 +167,7 @@ jobs:
         run: yarn workspace livemock-core build
 
       - name: Build desktop app
-        run: yarn workspace livemock build
+        run: yarn workspace desktop build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
