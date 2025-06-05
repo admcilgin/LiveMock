@@ -29,6 +29,9 @@ on:
 jobs:
   build-mac:
     runs-on: macos-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
     permissions:
       contents: read
       packages: write
@@ -60,12 +63,27 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
+      - name: Cache Electron
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: ${{ runner.os }}-electron-${{ hashFiles('desktop/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
       - name: Install dependencies
         run: |
           yarn config set nodeLinker node-modules
           yarn config set networkTimeout 300000
           yarn config set httpTimeout 300000
           yarn install
+
+      - name: Rebuild native dependencies
+        run: |
+          cd desktop
+          yarn run electron-rebuild || true
 
       - name: Build core
         run: yarn workspace livemock-core build
@@ -81,6 +99,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEBUG: electron-builder
+          CI: true
+          ELECTRON_CACHE: ~/.cache/electron
+          ELECTRON_BUILDER_CACHE: ~/.cache/electron-builder
+          NODE_ENV: production
 
       - name: Verify desktop build
         run: |
@@ -95,12 +117,17 @@ jobs:
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mac-build
+          name: mac-build-${{ github.run_number }}
           path: desktop/release/**/*.dmg
+          retention-days: 30
+          compression-level: 6
           if-no-files-found: warn
 
   build-windows:
     runs-on: windows-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
     permissions:
       contents: read
       packages: write
@@ -132,12 +159,27 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
+      - name: Cache Electron
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: ${{ runner.os }}-electron-${{ hashFiles('desktop/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
       - name: Install dependencies
         run: |
           yarn config set nodeLinker node-modules
           yarn config set networkTimeout 300000
           yarn config set httpTimeout 300000
           yarn install
+
+      - name: Rebuild native dependencies
+        run: |
+          cd desktop
+          yarn run electron-rebuild || true
 
       - name: Build core
         run: yarn workspace livemock-core build
@@ -154,6 +196,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEBUG: electron-builder
+          CI: true
+          ELECTRON_CACHE: ~/.cache/electron
+          ELECTRON_BUILDER_CACHE: ~/.cache/electron-builder
+          NODE_ENV: production
 
       - name: Verify desktop build
         run: |
@@ -170,12 +216,17 @@ jobs:
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build
+          name: windows-build-${{ github.run_number }}
           path: desktop/release/**/*.exe
+          retention-days: 30
+          compression-level: 6
           if-no-files-found: warn
 
   build-linux:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
     permissions:
       contents: read
       packages: write
@@ -206,6 +257,16 @@ jobs:
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
+
+      - name: Cache Electron
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: ${{ runner.os }}-electron-${{ hashFiles('desktop/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
 
       - name: Install dependencies
         run: |
@@ -234,6 +295,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEBUG: electron-builder
+          CI: true
+          ELECTRON_CACHE: ~/.cache/electron
+          ELECTRON_BUILDER_CACHE: ~/.cache/electron-builder
+          NODE_ENV: production
 
       - name: Verify desktop build
         run: |
@@ -248,8 +313,10 @@ jobs:
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-build
+          name: linux-build-${{ github.run_number }}
           path: |
             desktop/release/**/*.AppImage
             desktop/release/**/*.deb
+          retention-days: 30
+          compression-level: 6
           if-no-files-found: warn
