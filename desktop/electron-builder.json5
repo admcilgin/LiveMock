@@ -29,8 +29,9 @@
     "icon" :"mas_asset/icon.icns",
     "hardenedRuntime": true,
     "gatekeeperAssess": false,
-    "entitlements": "build/entitlements.mac.plist",
-    "entitlementsInherit": "build/entitlements.mac.plist",
+    "entitlements": "mas_asset/entitlements.mac.plist",
+    "entitlementsInherit": "mas_asset/entitlements.mac.plist",
+    "identity": null,
     "target": [
       "dmg",{
           "target":"mas",
